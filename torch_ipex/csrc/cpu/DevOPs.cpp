@@ -30,7 +30,6 @@ namespace cpu {
 
 #define CHECK_DNNL_OP_PRE_COND(tensor)                                    \
   TORCH_INTERNAL_ASSERT(tensor.defined());                                \
-  TORCH_INTERNAL_ASSERT(tensor.is_contiguous());                          \
   TORCH_INTERNAL_ASSERT(tensor.layout() == c10::kStrided)
 
 at::Tensor AtenIpexCPUDev::dil_convolution(
@@ -1091,13 +1090,11 @@ at::Tensor AtenIpexCPUDev::dil_transpose(const at::Tensor & self, int64_t dim0, 
   CHECK_DNNL_OP_PRE_COND(self);
   dil::tensor x = dbl::comm::try_gen_dil_tensor(self);
   TORCH_CHECK(x.ndims() > 0, "DNNL transpose cannot generate DNNL tensor for the input aten Tensor. input tensor dim: ", self.dim());
-  dil::tensor y;
-  std::vector<int> axes(x.ndims());
-  std::iota(axes.begin(), axes.end(), 0);
   dim0 = at::maybe_wrap_dim(dim0, self.dim());
   dim1 = at::maybe_wrap_dim(dim1, self.dim());
-  std::swap(axes[dim0], axes[dim1]);
-  y.transpose_from(x, axes);
+  dil::tensor y;
+  dil::direct_copy::compute(x, y);
+  y.transpose_(dim0, dim1);
   return dbl::comm::gen_aten_tensor_by(y);
 }
 
