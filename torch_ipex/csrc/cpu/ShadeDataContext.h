@@ -144,7 +144,7 @@ struct ShadeDataContext {
    * @return If the input tensor does not contain DNNL buffer, the function will return
    * an empty DNNL buffer. The caller should check the return buffer is empty or not.
    */
-  static inline dil::tensor getDilTensor(const at::Tensor &tensor) {
+  static inline dil::tensor& getDilTensor(const at::Tensor &tensor) {
     TORCH_INTERNAL_ASSERT(tensor.has_storage());
     void *raw_context = tensor.storage().data_ptr().get_context();
     TORCH_INTERNAL_ASSERT(raw_context != nullptr);
@@ -153,7 +153,6 @@ struct ShadeDataContext {
       return shade_data_context->dil_tensor;
     } else {
       TORCH_INTERNAL_ASSERT(false);
-      return dil::tensor();
     }
   }
 
