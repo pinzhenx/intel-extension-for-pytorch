@@ -24,17 +24,6 @@ dil::tensor dil_tensor_from_dense(const at::Tensor& tensor) {
   return {tensor.sizes().vec(), get_dil_data_type(cur_type), tensor.strides().vec(), tensor.data_ptr()};
 }
 
-at::Tensor dil_tensor_to_dense(const at::Tensor& tensor) {
-  TORCH_INTERNAL_ASSERT_DEBUG_ONLY(cpu::ShadeDataContext::isDilTensor(tensor));
-  TORCH_INTERNAL_ASSERT_DEBUG_ONLY(tensor.unsafeGetTensorImpl()->version_counter().current_version() == 1);
-  auto dil_tensor = cpu::ShadeDataContext::getDilTensor(tensor);
-  at::Tensor cpu_tensor = at::empty(
-    dil_tensor.get_dims(),
-    tensor.options().device(c10::kCPU).layout(c10::kStrided));
-  dil_tensor.to_public(cpu_tensor.data_ptr(), dil_tensor.get_data_type());
-  return cpu_tensor;
-}
-
 void reorder_to_bf16_for_mix_prec(const at::Tensor& tensor) {
   if (!check_auto_mix_bf16_fp32())
     return;

@@ -10,7 +10,6 @@ namespace dbl {
 namespace comm {
 
 dil::tensor dil_tensor_from_dense(const at::Tensor& tensor);
-at::Tensor dil_tensor_to_dense(const at::Tensor& tensor);
 void reorder_to_bf16_for_mix_prec(const at::Tensor& tensor);
 
 /**
