@@ -23,6 +23,13 @@ void reorder_to_bf16_for_mix_prec(const at::Tensor& tensor);
 void reorder_to_dtype(const at::Tensor& tensor, at::ScalarType dtype);
 
 /**
+ * Reorder the DNNL tensor to the public format if the input tensor contains DNNL tensor.
+ *
+ * @param[in] tensor The DNNL tensor of the input ipex tensor to be reordered to public format
+ */
+void reorder_to_public(const at::Tensor& tensor);
+
+/**
  * Reorder the input tensor to the expected descriptor.
  *
  * @param[in] tensor        The tensor to be reordered to the spcified oneDNN descriptor
