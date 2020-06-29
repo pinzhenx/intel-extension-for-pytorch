@@ -71,7 +71,7 @@ void reorder_to_desc(const at::Tensor& tensor, const dil::tensor::desc& expected
   equip_dil_buffer(tensor,  dst);
 }
 
-void equip_dil_buffer(const at::Tensor& tensor, dil::tensor dil_tensor_buffer) {
+void equip_dil_buffer(const at::Tensor& tensor, dil::tensor dil_buffer) {
   TORCH_CHECK(
       tensor.device().is_dpcpp(),
       "dil buffer can only be equipped to dpcpp tensor");
@@ -84,13 +84,13 @@ void equip_dil_buffer(const at::Tensor& tensor, dil::tensor dil_tensor_buffer) {
   // Build new shade data context
   cpu::ShadeDataContext *new_shade_data_context = cpu::ShadeDataContext::allocShadeDataContext();
   new_shade_data_context->data_type = cpu::SHADE_DATA_TYPE::DIL;
-  new_shade_data_context->dil_tensor = dil_tensor_buffer;
+  new_shade_data_context->dil_tensor = dil_buffer;
 
   void *tensor_data = nullptr;
-  if (dil_tensor_buffer.get_data_type() != get_dil_data_type(tensor.scalar_type())) {
+  if (dil_buffer.get_data_type() != get_dil_data_type(tensor.scalar_type())) {
     new_shade_data_context->mix_prec_type = cpu::MIX_PREC_TYPE::MIX_BF16_FP32;
-  } else if (dil_tensor_buffer.is_public_format()) {
-    tensor_data = dil_tensor_buffer.get_data_handle();
+  } else if (dil_buffer.is_public_format()) {
+    tensor_data = dil_buffer.get_data_handle();
     new_shade_data_context->cpu_raw_data = tensor_data;
     new_shade_data_context->cpu_del_fun = &(c10::detail::deleteNothing);
   }
@@ -109,8 +109,8 @@ void equip_dil_buffer(const at::Tensor& tensor, dil::tensor dil_tensor_buffer) {
   // After equip_dil_buffer(), whole storage should be managed by dil tensor,
   // and thus storage metadata should be overwritten by dil tensor 
   // Note: Storage::set_numel() might be removed later
-  ipex_tensor_impl->storage().set_numel(dil_tensor_buffer.get_nelems());
-  cpu::dbl::comm::sync_shape_from_dil_to_aten(tensor, dil_tensor_buffer);
+  ipex_tensor_impl->storage().set_numel(dil_buffer.get_nelems());
+  cpu::dbl::comm::sync_shape_from_dil_to_aten(tensor, dil_buffer);
 }
 
 dil::tensor dil_tensor_from_cpu_buffer(const at::Tensor& tensor) {
