@@ -113,32 +113,32 @@ void equip_dil_buffer(const at::Tensor& tensor, dil::tensor dil_tensor_buffer) {
   cpu::dbl::comm::sync_shape_from_dil_to_aten(tensor, dil_tensor_buffer);
 }
 
-dil::tensor dil_tensor_from_cpu_storage(const at::Tensor& tensor) {
-  TORCH_CHECK(tensor.layout() == at::Layout::Strided, "dil_tensor_from_cpu_storage expects dense tensor input");
+dil::tensor dil_tensor_from_cpu_buffer(const at::Tensor& tensor) {
+  TORCH_CHECK(tensor.layout() == at::Layout::Strided, "dil_tensor_from_cpu_buffer expects dense tensor input");
   auto cur_type = tensor.scalar_type();
   return {tensor.sizes().vec(), get_dil_data_type(cur_type), tensor.strides().vec(), tensor.data_ptr()};
 }
 
-dil::tensor dil_tensor_from_dil_storage(const at::Tensor& tensor) {
-  auto dil_storage = cpu::ShadeDataContext::getDilStorage(tensor);
+dil::tensor dil_tensor_from_dil_buffer(const at::Tensor& tensor) {
+  auto dil_buffer = cpu::ShadeDataContext::getDilStorage(tensor);
   if (cpu::ShadeDataContext::isRawDataVisible(tensor)) {
-    dil::tensor result {tensor.sizes().vec(), dil_storage.get_data_type(), tensor.strides().vec(), tensor.data_ptr()};
-    if (dil_storage.has_workspace()) {
-      result.copy_workspace(dil_storage);
+    dil::tensor result {tensor.sizes().vec(), dil_buffer.get_data_type(), tensor.strides().vec(), tensor.data_ptr()};
+    if (dil_buffer.has_workspace()) {
+      result.copy_workspace(dil_buffer);
     }
     return result;
   } else {
     TORCH_INTERNAL_ASSERT_DEBUG_ONLY(check_tensor_own_whole_storage(tensor),
         "Non-visible tensor should own whole storage. Should not reach here.");
-    return dil_storage;
+    return dil_buffer;
   }
 }
 
 dil::tensor try_gen_dil_tensor(const at::Tensor &input) {
   if (cpu::ShadeDataContext::isDilTensor(input)) {
-    return dil_tensor_from_dil_storage(input);
+    return dil_tensor_from_dil_buffer(input);
   } else {
-    return dil_tensor_from_cpu_storage(input);
+    return dil_tensor_from_cpu_buffer(input);
   }
 }
 
