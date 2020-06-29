@@ -188,6 +188,11 @@ struct ShadeDataContext {
     }
   }
 
+  static inline bool isRawDataVisible(const at::Tensor &tensor) {
+    auto* ctx = (ShadeDataContext*)tensor.storage().data_ptr().get_context();
+    return ctx->cpu_raw_data != nullptr;
+  }
+
   /**
    * Check if the buffer of input tensor is owned by DNNL.
    *

@@ -16,14 +16,6 @@ namespace cpu {
 namespace dbl {
 namespace comm {
 
-dil::tensor dil_tensor_from_dense(const at::Tensor& tensor) {
-  AT_ASSERTM(
-    tensor.layout() == at::Layout::Strided,
-    "dil_tensor_view_from_dense expects dense tensor input");
-  at::ScalarType cur_type = tensor.scalar_type();
-  return {tensor.sizes().vec(), get_dil_data_type(cur_type), tensor.strides().vec(), tensor.data_ptr()};
-}
-
 void reorder_to_bf16_for_mix_prec(const at::Tensor& tensor) {
   if (!check_auto_mix_bf16_fp32())
     return;
@@ -54,6 +46,7 @@ void reorder_to_public(const at::Tensor& tensor) {
   auto *shade_data_context = (cpu::ShadeDataContext*)tensor.unsafeGetTensorImpl()->storage().data_ptr().get_context();
   if (!dil_tensor.is_public_format()) {
     TORCH_INTERNAL_ASSERT_DEBUG_ONLY(tensor.storage().unsafeGetStorageImpl()->data_ptr().get_deleter() == &(cpu::ShadeDataContext::freeShadeDataContext));
+    TORCH_INTERNAL_ASSERT_DEBUG_ONLY(shade_data_context->cpu_raw_data == nullptr);
     TORCH_INTERNAL_ASSERT_DEBUG_ONLY(shade_data_context->cpu_del_fun == nullptr);
     TORCH_INTERNAL_ASSERT_DEBUG_ONLY(aten_tensor_scalar_type == at::kFloat || aten_tensor_scalar_type == at::kBFloat16);
     dst_desc = dst_desc.to_default_format();
@@ -120,17 +113,32 @@ void equip_dil_buffer(const at::Tensor& tensor, dil::tensor dil_tensor_buffer) {
   cpu::dbl::comm::sync_shape_from_dil_to_aten(tensor, dil_tensor_buffer);
 }
 
+dil::tensor dil_tensor_from_cpu_storage(const at::Tensor& tensor) {
+  TORCH_CHECK(tensor.layout() == at::Layout::Strided, "dil_tensor_from_cpu_storage expects dense tensor input");
+  auto cur_type = tensor.scalar_type();
+  return {tensor.sizes().vec(), get_dil_data_type(cur_type), tensor.strides().vec(), tensor.data_ptr()};
+}
+
+dil::tensor dil_tensor_from_dil_storage(const at::Tensor& tensor) {
+  auto dil_storage = cpu::ShadeDataContext::getDilStorage(tensor);
+  if (cpu::ShadeDataContext::isRawDataVisible(tensor)) {
+    dil::tensor result {tensor.sizes().vec(), dil_storage.get_data_type(), tensor.strides().vec(), tensor.data_ptr()};
+    if (dil_storage.has_workspace()) {
+      result.copy_workspace(dil_storage);
+    }
+    return result;
+  } else {
+    TORCH_INTERNAL_ASSERT_DEBUG_ONLY(check_tensor_own_whole_storage(tensor),
+        "Non-visible tensor should own whole storage. Should not reach here.");
+    return dil_storage;
+  }
+}
+
 dil::tensor try_gen_dil_tensor(const at::Tensor &input) {
   if (cpu::ShadeDataContext::isDilTensor(input)) {
-    auto dil_tensor = cpu::ShadeDataContext::getDilStorage(input);
-    if ((!check_aten_dil_shape_info(input, dil_tensor)) && dil_tensor.is_public_format()) {
-      dil_tensor.set_dims_and_strides(input.sizes().vec(), input.strides().vec());
-    }
-    // Does not support the case if the dil tensor is block format but it is just a part of tensor buffer
-    TORCH_INTERNAL_ASSERT_DEBUG_ONLY(dil_tensor.is_public_format() || check_tensor_own_whole_storage(input));
-    return dil_tensor;
+    return dil_tensor_from_dil_storage(input);
   } else {
-    return dil_tensor_from_dense(input);
+    return dil_tensor_from_cpu_storage(input);
   }
 }
 
