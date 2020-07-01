@@ -150,7 +150,6 @@ class DPCPPClean(distutils.command.clean.clean, object):
 
 class DPCPPBuild(build_ext, object):
   def run(self):
-    print("run")
 
     # Generate the code before globbing!
     generate_ipex_cpu_aten_code(base_dir)
