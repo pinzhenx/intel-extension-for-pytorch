@@ -48,13 +48,23 @@ dil::tensor dil_tensor_from_dil_buffer(const at::Tensor& tensor) {
         static_cast<char *>(dil_buffer.get_data_handle()) +
         get_item_size(data_type) * tensor.storage_offset());
 
+    dil::tensor::desc desc;
+    if (dil_buffer.is_grouped()) {
+      TORCH_CHECK(check_tensor_own_whole_storage(tensor),
+          "Grouped weight tensor should own the whole storage");
+      desc = dil_buffer.get_desc();
+    } else {
+      desc = dil::tensor::desc(size, data_type, stride);
+    }
+
     // return a new tensor wrapper that may be part of the dil storage
-    dil::tensor result {size, data_type, stride, data_ptr};
+    dil::tensor result {desc, data_ptr};
 
     // attach the workspace to new tensor
     if (dil_buffer.has_workspace()) {
       result.copy_workspace(dil_buffer);
     }
+
     return result;
   } else {
     // When dil storage is blocked format, tensor itself should own the whole
