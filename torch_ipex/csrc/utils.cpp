@@ -87,6 +87,22 @@ dil::data_type get_dil_data_type(at::ScalarType at_dt) {
   }
 }
 
+size_t get_dil_dt_size(dil::data_type dt) {
+  switch (dt) {
+    case dil::data_type::bf16:
+    case dil::data_type::f16: 
+      return 2;
+    case dil::data_type::f32:
+    case dil::data_type::s32:
+      return 4;
+    case dil::data_type::s8:
+    case dil::data_type::u8:
+      return 1;
+    case dil::data_type::undef:
+      TORCH_CHECK(false, "Undefined data type");
+  }
+}
+
 at::ScalarType get_at_data_type(dil::data_type dil_dt) {
   if (dil_dt == dil::data_type::bf16) {
     return at::ScalarType::BFloat16;

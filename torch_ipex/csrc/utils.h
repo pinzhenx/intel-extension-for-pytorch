@@ -17,6 +17,7 @@ bool check_layout_by_options(const at::TensorOptions& tensor_options, c10::Layou
 bool get_device_count(c10::Device dev_type, c10::DeviceIndex *count);
 dil::data_type get_dil_data_type(at::ScalarType);
 at::ScalarType get_at_data_type(dil::data_type);
+size_t get_dil_dt_size(dil::data_type dt);
 bool check_auto_dnnl();
 bool check_auto_mix_bf16_fp32();
 bool check_tensor_own_whole_storage(const at::Tensor& tensor);
